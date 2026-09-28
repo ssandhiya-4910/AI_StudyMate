@@ -1,20 +1,20 @@
 from flask import Flask, render_template, request, jsonify
+from google import genai
 from dotenv import load_dotenv
-from openai import OpenAI
 import os
 
 load_dotenv()
 
 app = Flask(__name__)
 
-# Get OpenAI API key
-api_key = os.getenv("OPENAI_API_KEY")
+# Get Gemini API key
+api_key = os.getenv("GEMINI_API_KEY")
 
 if not api_key:
-    raise ValueError("OPENAI_API_KEY is not configured.")
+    raise ValueError("GEMINI_API_KEY is not configured.")
 
-# Create OpenAI client
-client = OpenAI(api_key=api_key)
+# Create Gemini client
+client = genai.Client(api_key=api_key)
 
 
 @app.route("/")
@@ -49,7 +49,7 @@ Summarize the following study material in simple English.
 Requirements:
 - Use a short heading
 - Use clear bullet points
-- Keep important information
+- Keep the important information
 - Make it easy for students to study
 
 Study material:
@@ -104,15 +104,13 @@ Original answer:
 
         prompt = prompts.get(task, prompts["explain"])
 
-        response = client.responses.create(
-            model="gpt-5.6-luna",
-            input=prompt
+        response = client.models.generate_content(
+            model="gemini-3.8-flash",
+            contents=prompt
         )
 
-        result = response.output_text
-
         return jsonify({
-            "result": result
+            "result": response.text
         })
 
     except Exception:
@@ -122,4 +120,7 @@ Original answer:
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000))
+    )
