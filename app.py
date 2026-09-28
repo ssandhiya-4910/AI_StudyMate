@@ -7,11 +7,13 @@ load_dotenv()
 
 app = Flask(__name__)
 
+# Get OpenAI API key
 api_key = os.getenv("OPENAI_API_KEY")
 
 if not api_key:
-    raise ValueError("OPENAI_API_KEY is missing from the .env file.")
+    raise ValueError("OPENAI_API_KEY is not configured.")
 
+# Create OpenAI client
 client = OpenAI(api_key=api_key)
 
 
@@ -22,80 +24,102 @@ def home():
 
 @app.route("/ask", methods=["POST"])
 def ask():
-    data = request.get_json()
+    try:
+        data = request.get_json()
 
-    user_text = data.get("text", "").strip()
-    task = data.get("task", "explain")
+        if not data:
+            return jsonify({
+                "error": "Invalid request."
+            }), 400
 
-    if not user_text:
-        return jsonify({
-            "error": "Please enter some text first."
-        }), 400
+        user_text = data.get("text", "").strip()
+        task = data.get("task", "explain")
 
-    prompts = {
-        "summarize": f"""
+        if not user_text:
+            return jsonify({
+                "error": "Please enter some text first."
+            }), 400
+
+        prompts = {
+            "summarize": f"""
 You are an AI study assistant for college students.
 
 Summarize the following study material in simple English.
-Use short headings and bullet points.
-Keep the important information.
+
+Requirements:
+- Use a short heading
+- Use clear bullet points
+- Keep important information
+- Make it easy for students to study
 
 Study material:
 {user_text}
 """,
 
-        "quiz": f"""
+            "quiz": f"""
 You are an AI study assistant for college students.
 
 Create 5 useful multiple-choice questions from the following study material.
-Give 4 options for each question and clearly show the correct answer.
+
+For each question:
+- Give the question
+- Give 4 options: A, B, C, D
+- Clearly mention the correct answer
 
 Study material:
 {user_text}
 """,
 
-        "explain": f"""
+            "explain": f"""
 You are an AI study assistant for college students.
 
 Explain the following topic in simple English.
-Give:
-1. Simple definition
-2. Main points
-3. One simple example
+
+Give the answer in this format:
+
+1. Simple Definition
+2. Main Points
+3. Simple Example
 
 Topic:
 {user_text}
 """,
 
-        "improve": f"""
+            "improve": f"""
 You are an AI study assistant for college students.
 
 Improve the following answer.
-Make it clear, grammatically correct, and suitable for an exam.
-Do not change the main meaning.
+
+Requirements:
+- Correct grammar
+- Make the answer clear
+- Make it suitable for an exam
+- Keep the original meaning
+- Do not add unrelated information
 
 Original answer:
 {user_text}
 """
-    }
+        }
 
-    prompt = prompts.get(task, prompts["explain"])
+        prompt = prompts.get(task, prompts["explain"])
 
-    try:
         response = client.responses.create(
             model="gpt-5.6-luna",
             input=prompt
         )
 
+        result = response.output_text
+
         return jsonify({
-            "result": response.output_text
+            "result": result
         })
 
-    except Exception as e:
+    except Exception:
         return jsonify({
             "error": "Unable to get an AI response. Please try again."
         }), 500
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
