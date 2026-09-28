@@ -117,11 +117,11 @@ Original answer:
             "result": result
         })
 
-    except Exception:
+        except Exception as e:
+        print("GEMINI ERROR:", e)
         return jsonify({
             "error": "Unable to get an AI response. Please try again."
         }), 500
-
 
 if __name__ == "__main__":
     app.run(
