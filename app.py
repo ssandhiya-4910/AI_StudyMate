@@ -1,13 +1,10 @@
 from flask import Flask, render_template, request, jsonify
 from google import genai
-from dotenv import load_dotenv
 import os
-
-load_dotenv()
 
 app = Flask(__name__)
 
-# Get Gemini API key
+# Get Gemini API key from Render
 api_key = os.getenv("GEMINI_API_KEY")
 
 if not api_key:
@@ -24,58 +21,57 @@ def home():
 
 @app.route("/ask", methods=["POST"])
 def ask():
-    try:
-        data = request.get_json()
+    data = request.get_json()
 
-        if not data:
-            return jsonify({
-                "error": "Invalid request."
-            }), 400
+    if not data:
+        return jsonify({
+            "error": "Invalid request."
+        }), 400
 
-        user_text = data.get("text", "").strip()
-        task = data.get("task", "explain")
+    user_text = data.get("text", "").strip()
+    task = data.get("task", "explain")
 
-        if not user_text:
-            return jsonify({
-                "error": "Please enter some text first."
-            }), 400
+    if not user_text:
+        return jsonify({
+            "error": "Please enter some text first."
+        }), 400
 
-        prompts = {
-            "summarize": f"""
+    prompts = {
+        "summarize": f"""
 You are an AI study assistant for college students.
 
 Summarize the following study material in simple English.
 
-Requirements:
-- Use a short heading
-- Use clear bullet points
-- Keep the important information
-- Make it easy for students to study
+Use:
+- A clear heading
+- Short bullet points
+- Important information
+- Easy-to-understand language
 
 Study material:
 {user_text}
 """,
 
-            "quiz": f"""
+        "quiz": f"""
 You are an AI study assistant for college students.
 
 Create 5 useful multiple-choice questions from the following study material.
 
 For each question:
-- Give the question
-- Give 4 options: A, B, C, D
-- Clearly mention the correct answer
+- Write the question
+- Give four options: A, B, C and D
+- Clearly identify the correct answer
 
 Study material:
 {user_text}
 """,
 
-            "explain": f"""
+        "explain": f"""
 You are an AI study assistant for college students.
 
 Explain the following topic in simple English.
 
-Give the answer in this format:
+Use this format:
 
 1. Simple Definition
 2. Main Points
@@ -85,14 +81,14 @@ Topic:
 {user_text}
 """,
 
-            "improve": f"""
+        "improve": f"""
 You are an AI study assistant for college students.
 
 Improve the following answer.
 
 Requirements:
 - Correct grammar
-- Make the answer clear
+- Make it clear
 - Make it suitable for an exam
 - Keep the original meaning
 - Do not add unrelated information
@@ -100,17 +96,25 @@ Requirements:
 Original answer:
 {user_text}
 """
-        }
+    }
 
-        prompt = prompts.get(task, prompts["explain"])
+    prompt = prompts.get(task, prompts["explain"])
 
+    try:
         response = client.models.generate_content(
             model="gemini-3.8-flash",
             contents=prompt
         )
 
+        result = response.text
+
+        if not result:
+            return jsonify({
+                "error": "No response was generated."
+            }), 500
+
         return jsonify({
-            "result": response.text
+            "result": result
         })
 
     except Exception:
